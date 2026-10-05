@@ -1,6 +1,6 @@
 # Large-Button Sudoku
 
-A free, easy-to-use Sudoku game designed for my mom, which is an older adults and anyone who finds small buttons hard to tap. It runs in any web browser, with nothing to install and no account to create.
+A free, easy-to-use Sudoku game designed for my mom, which is a senior, also older adult and anyone who finds small buttons hard to tap. It runs in any web browser, with nothing to install and no account to create.
 
 **Play it:** https://yourusername.github.io/sudoku/
 
