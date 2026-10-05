@@ -3,7 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Easy Sudoku</title>
+<title>Sudoku</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sudoku">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 :root{--bg:#f1f5f7;--ink:#14202b;--card:#fff;--line:#14202b;--thin:#a9b6c0;--pri:#0d6464;--priInk:#fff;--sec:#dde6ec;--sel:#ffd34d;--peer:#e6eef4;--same:#bfe3e3;--bad:#ffd6cf;--badInk:#a1160a;--mine:#0a4f9e;--mute:#445563;
@@ -46,9 +51,10 @@ header h2{font-size:30px;margin:0}
 #pad button{min-height:72px;font-size:38px;background:var(--card)}
 .acts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 .acts button{font-size:24px;min-height:72px}
-#win{position:fixed;inset:0;background:rgba(10,20,28,.8);display:grid;place-items:center;padding:20px}
+#win{position:fixed;inset:0;background:rgba(10,20,28,.88);display:grid;place-items:center;padding:20px;z-index:10}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #win[hidden],[hidden]{display:none!important}
-#win div{background:var(--card);border:4px solid var(--line);border-radius:22px;padding:28px;max-width:460px;width:100%;text-align:center}
+#win div{position:relative;z-index:1;background:var(--card);border:4px solid var(--line);border-radius:22px;padding:28px;max-width:460px;width:100%;text-align:center}
 #win h2{font-size:40px;margin:0 0 8px}
 #win p{font-size:24px;margin:0 0 20px}
 #win button{width:100%;margin-top:12px;font-size:26px}
@@ -85,11 +91,13 @@ header h2{font-size:30px;margin:0}
 </main>
 
 <div id="win" hidden role="dialog" aria-modal="true">
+  <canvas id="fx"></canvas>
   <div>
-    <h2>Well done!</h2>
+    <h2>Well done! 🎉</h2>
     <p>You finished the puzzle.</p>
-    <button id="again" class="pri">Play another</button>
-    <button id="toMenu">Back to menu</button>
+    <button id="again" class="pri">Start a new game</button>
+    <button id="toMenu">Choose a different level</button>
+    <button id="snd">Sound: On</button>
   </div>
 </div>
 
@@ -163,16 +171,61 @@ function render(){
 }
 
 function place(d){
+  audio();
   if(!S||S.sel<0||S.given[S.sel]||S.g[S.sel]===d)return;
   S.hist.push([S.sel,S.g[S.sel]]);S.g[S.sel]=d;
   render();save();checkWin();
 }
 function checkWin(){
-  if(S.g.every((v,i)=>v===S.sol[i])){clearSave();setTimeout(()=>{$('#win').hidden=false;$('#again').focus()},350)}
+  if(S.g.every((v,i)=>v===S.sol[i])){clearSave();setTimeout(celebrate,350)}
 }
+function celebrate(){
+  $('#again').textContent='Start a new '+LV[S.lvl].n+' game';
+  $('#win').hidden=false;$('#again').focus();
+  fireworks();fanfare();
+}
+
+/* ---------- Sound (made with the browser, no files needed) ---------- */
+let AC=null,soundOn=true;
+try{soundOn=localStorage.getItem('sudoku-sound')!=='off'}catch(e){}
+function audio(){try{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume()}catch(e){}return AC}
+function tone(f,t,d,type,v){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.05)}
+function whistle(){if(!soundOn||!audio())return;const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.setValueAtTime(400,t);o.frequency.exponentialRampToValueAtTime(1500,t+.6);g.gain.setValueAtTime(.06,t);g.gain.linearRampToValueAtTime(0,t+.6);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+.65)}
+function pop(){if(!soundOn||!audio())return;const t=AC.currentTime,len=AC.sampleRate*.5|0,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);
+  const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();s.buffer=buf;f.type='lowpass';f.frequency.value=2500;g.gain.value=.4;s.connect(f);f.connect(g);g.connect(AC.destination);s.start(t);
+  const o=AC.createOscillator(),g2=AC.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+.25);g2.gain.setValueAtTime(.4,t);g2.gain.exponentialRampToValueAtTime(.001,t+.3);o.connect(g2);g2.connect(AC.destination);o.start(t);o.stop(t+.35)}
+function fanfare(){if(!soundOn||!audio())return;const t=AC.currentTime,n=[523.25,659.25,783.99,1046.5];n.forEach((f,i)=>tone(f,t+i*.16,.4,'triangle',.18));n.forEach(f=>tone(f,t+.7,1.2,'triangle',.12))}
+function syncSnd(){$('#snd').textContent='Sound: '+(soundOn?'On':'Off')}
+$('#snd').onclick=()=>{soundOn=!soundOn;try{localStorage.setItem('sudoku-sound',soundOn?'on':'off')}catch(e){}syncSnd();if(soundOn){audio();fanfare()}};
+syncSnd();
+
+/* ---------- Fireworks ---------- */
+let fxRun=false,fxRaf=0,fxEnd=0,fxNext=0,rockets=[],parts=[];
+const cv=$('#fx'),cx=cv.getContext('2d');
+function sizeFx(){const r=window.devicePixelRatio||1;cv.width=innerWidth*r;cv.height=innerHeight*r;cx.setTransform(r,0,0,r,0,0)}
+function fireworks(){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  sizeFx();fxRun=true;rockets=[];parts=[];fxNext=0;fxEnd=performance.now()+15000;fxRaf=requestAnimationFrame(frame);
+}
+function stopFx(){fxRun=false;cancelAnimationFrame(fxRaf);cx.clearRect(0,0,innerWidth,innerHeight)}
+function frame(now){
+  if(!fxRun)return;
+  const w=innerWidth,h=innerHeight;cx.clearRect(0,0,w,h);
+  if(now<fxEnd&&now>fxNext){rockets.push({x:w*(.12+Math.random()*.76),y:h,ty:h*(.12+Math.random()*.38),hue:Math.random()*360});whistle();fxNext=now+500+Math.random()*500}
+  rockets=rockets.filter(r=>{
+    r.y-=h*.011;cx.globalAlpha=1;cx.fillStyle='#fff';cx.beginPath();cx.arc(r.x,r.y,3,0,7);cx.fill();
+    if(r.y<=r.ty){pop();const k=Math.min(1.3,w/700+.5);for(let i=0;i<70;i++){const a=Math.PI*2*i/70,sp=(1+Math.random()*4.5)*k;parts.push({x:r.x,y:r.y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,l:1,c:'hsl('+((r.hue+Math.random()*50)%360|0)+',100%,65%)'})}return false}
+    return true});
+  parts=parts.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.05;p.vx*=.985;p.l-=.011;if(p.l<=0)return false;cx.globalAlpha=p.l;cx.fillStyle=p.c;cx.beginPath();cx.arc(p.x,p.y,3,0,7);cx.fill();return true});
+  cx.globalAlpha=1;
+  if(now<fxEnd||rockets.length||parts.length)fxRaf=requestAnimationFrame(frame);else fxRun=false;
+}
+addEventListener('resize',()=>{if(fxRun)sizeFx()});
 $('#erase').onclick=()=>{if(S.sel<0||S.given[S.sel]||!S.g[S.sel])return;S.hist.push([S.sel,S.g[S.sel]]);S.g[S.sel]=0;render();save()};
 $('#undo').onclick=()=>{const h=S.hist.pop();if(!h)return;S.g[h[0]]=h[1];S.sel=h[0];render();save()};
 $('#hint').onclick=()=>{
+  audio();
   let i=(S.sel>=0&&!S.given[S.sel]&&S.g[S.sel]!==S.sol[S.sel])?S.sel:S.g.findIndex((v,k)=>v!==S.sol[k]);
   if(i<0)return;
   S.sel=i;S.hist.push([i,S.g[i]]);S.g[i]=S.sol[i];render();save();checkWin();
@@ -180,7 +233,7 @@ $('#hint').onclick=()=>{
 
 function show(game){$('#home').hidden=game;$('#game').hidden=!game;window.scrollTo(0,0)}
 function start(lvl){S=make(lvl);save();openGame()}
-function openGame(){$('#title').textContent=LV[S.lvl].n+' puzzle';$('#win').hidden=true;show(true);render()}
+function openGame(){stopFx();$('#title').textContent=LV[S.lvl].n+' puzzle';$('#win').hidden=true;show(true);render()}
 function home(){
   const d=load();$('#cont').hidden=!d;
   if(d){const left=d.g.filter((v,i)=>v!==d.sol[i]).length;$('#contSub').textContent=LV[d.lvl].n+' · '+left+' squares left'}
@@ -189,8 +242,8 @@ function home(){
 document.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>start(b.dataset.l));
 $('#cont').onclick=()=>{const d=load();if(d){S={...d,sel:-1,hist:[]};openGame()}};
 $('#menu').onclick=home;
-$('#toMenu').onclick=()=>{$('#win').hidden=true;home()};
-$('#again').onclick=()=>{$('#win').hidden=true;start(S.lvl)};
+$('#toMenu').onclick=()=>{stopFx();$('#win').hidden=true;home()};
+$('#again').onclick=()=>{stopFx();$('#win').hidden=true;start(S.lvl)};
 document.addEventListener('keydown',e=>{if(S&&!$('#game').hidden&&/^[1-9]$/.test(e.key))place(+e.key)});
 home();
 </script>
